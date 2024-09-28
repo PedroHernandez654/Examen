@@ -1,0 +1,107 @@
+﻿@page "/"
+@using ExamenPrueba2.DataHub
+@using ExamenPrueba2.Model
+@using ExamenPrueba2.Model.ViewModel
+@inject SignalRClient SignalRClient
+
+<PageTitle>Index</PageTitle>
+
+<h1>Examen Prueba 2</h1>
+
+<NavLink class="btn btn-primary" href="random">
+    <span class="oi oi-plus" aria-hidden="true"></span> Registrar Nuevo
+</NavLink>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">No.</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Multiplo</th>
+            <th scope="col">Valor Random</th>
+        </tr>
+    </thead>
+    <tbody class="table-group-divider">
+        @foreach (var item in randomDataList)
+        {
+            <tr>
+                <th scope="row">@item.Id</th>
+                <td>@item.Nombre</td>
+                <td>@item.Multiplo</td>
+                <td>@item.NumeroRandom</td>
+                <td>
+                    <button class="btn btn-danger" @onclick="() => DeleteItem(item.Id)">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<RandomTable> randomDataList = new List<RandomTable>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SignalRClient.StartAsync();
+        SignalRClient.DataReceived += OnDataReceived;
+        SignalRClient.RowUpdated += OnRowUpdated;
+        SignalRClient.ItemDeleted += OnItemDeleted;
+    }
+
+    private void OnDataReceived(RandomTable randomData)
+    {
+        var existingItem = randomDataList.FirstOrDefault(x => x.Id == randomData.Id);
+        if (existingItem != null)
+        {
+            existingItem.NumeroRandom = randomData.NumeroRandom;
+        }
+        else
+        {
+            randomDataList.Add(randomData);
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnRowUpdated(int rowId, int newValue)
+    {
+        var existingItem = randomDataList.FirstOrDefault(x => x.Id == rowId);
+        if (existingItem != null)
+        {
+            existingItem.NumeroRandom = newValue;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnItemDeleted(int id)
+    {
+        var itemToRemove = randomDataList.FirstOrDefault(x => x.Id == id);
+        if (itemToRemove != null)
+        {
+            randomDataList.Remove(itemToRemove);
+            InvokeAsync(StateHasChanged); 
+        }
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        var itemToRemove = randomDataList.FirstOrDefault(x => x.Id == id);
+        if (itemToRemove != null)
+        {
+            randomDataList.Remove(itemToRemove);
+            await InvokeAsync(StateHasChanged);
+            await SignalRClient.SendDeleteNotification(id);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        SignalRClient.DataReceived -= OnDataReceived;
+        SignalRClient.RowUpdated -= OnRowUpdated;
+        SignalRClient.ItemDeleted -= OnItemDeleted;
+        await SignalRClient.StopAsync();
+    }
+}
+
+

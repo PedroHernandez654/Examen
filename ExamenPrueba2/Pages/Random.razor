@@ -1,0 +1,70 @@
+﻿@page "/random"
+@using ExamenPrueba2.DataHub
+@using ExamenPrueba2.Interfaces
+@using ExamenPrueba2.Model.ViewModel
+@inject IRegisterRandomDataService RandomDataService
+@inject IJSRuntime JSRuntime
+@inject SignalRClient SignalRClient
+
+
+<PageTitle>Random</PageTitle>
+
+<EditForm Model="@randomViewModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label for="nombreInput" class="form-label">Nombre</label>
+        <InputText class="form-control" id="nombreInput" @bind-Value="randomViewModel.Nombre" />
+        <ValidationMessage For="@(() => randomViewModel.Nombre)" class="text-danger" />
+    </div>
+    <div class="mb-3">
+        <label for="multiploInput" class="form-label">Múltiplo</label>
+        <InputNumber class="form-control" id="multiploInput" @bind-Value="randomViewModel.Multiplo" />
+        <ValidationMessage For="@(() => randomViewModel.Multiplo)" class="text-danger" />
+    </div>
+    <div class="mb-3">
+        <label for="frecuenciaInput" class="form-label">Frecuencia</label>
+        <InputNumber class="form-control" id="frecuenciaInput" @bind-Value="randomViewModel.Frecuencia" />
+        <ValidationMessage For="@(() => randomViewModel.Frecuencia)" class="text-danger" />
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+<script>
+    if (@string.IsNullOrEmpty(response)){
+        alert(@response);
+    }
+</script>
+@code {
+    private string response = string.Empty;
+    private RandomViewModel randomViewModel = new RandomViewModel();
+    private bool sucess;
+
+    private async Task HandleValidSubmit()
+    {
+
+        (response, sucess) = await RandomDataService.SendRandomDataToClients(randomViewModel);
+
+        if (sucess)
+        {
+            await ShowAlert(response);
+        }
+        else
+        {
+            await ShowAlert(response);
+        }
+    }
+
+    private async Task ShowAlert(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", message);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await SignalRClient.StopAsync();
+    }
+
+
+}
+
